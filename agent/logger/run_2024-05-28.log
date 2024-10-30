@@ -1,0 +1,12 @@
+INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:5000
+INFO - [33mPress CTRL+C to quit[0m
+INFO - 127.0.0.1 - - [28/May/2024 17:02:34] "GET / HTTP/1.1" 200 -
+INFO - 127.0.0.1 - - [28/May/2024 17:04:31] "GET / HTTP/1.1" 200 -
+INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:6000
+INFO - [33mPress CTRL+C to quit[0m
+INFO - 127.0.0.1 - - [28/May/2024 17:30:21] "GET / HTTP/1.1" 200 -
+INFO - 127.0.0.1 - - [28/May/2024 17:31:00] "POST /save HTTP/1.1" 200 -
+INFO - 127.0.0.1 - - [28/May/2024 17:31:49] "GET / HTTP/1.1" 200 -
+INFO - 127.0.0.1 - - [28/May/2024 17:34:11] "GET / HTTP/1.1" 200 -

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科大讯飞智能体数据标注平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <button id="toggle-btn"></button>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>数据标注</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" id="overview-menu"><a href="{{ url_for('routes.overview') }}">文件管理</a></li>
+            <li class="menu-item">数据标注
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_preview') }}">数据预览</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.intelligent_analysis') }}">智能分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.online_annotation') }}">在线标注</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_process') }}">结构分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_retrieval') }}">数据检索</a></li>
+                </ul>
+            </li>
+            <li class="menu-item">智能体
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_call') }}">智能体调用</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_generation') }}">数据生成</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_conversation') }}">智能体对话</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <h1>文件管理</h1>
+        <div class="sidebar-header">
+            <div class="username-container">
+            <div class="username" onclick="toggleDropdown()">
+                用户：{{ session['username'] }}
+            </div>
+            <div class="dropdown" id="dropdown">
+                <a href="{{ url_for('routes.index') }}" onclick="logout()">退出登录</a>
+            </div>
+        </div>
+        </div>
+        <p>平台支持统一的数据管理与标注，以及智能体服务</p>
+        <div class="data-management">
+        <button class="btn" onclick="window.location.href='{{ url_for('routes.upload_data') }}'">创建数据集</button>
+            <p>示例数据集</p>
+        <table>
+            <tr>
+                <th>版本</th>
+                <th>数据名称</th>
+                <th>数据量</th>
+                <th>导入时间</th>
+                <th>标注类型</th>
+                <th>标注状态</th>
+                <th>清洗状态</th>
+                <th>操作</th>
+            </tr>
+            <tr>
+                <td>V1</td>
+                <td>示例</td>
+                <td>5716</td>
+                <td>20240615154825</td>
+                <td>agent-split</td>
+                <td>0.00% (0/5716)</td>
+                <td>-</td>
+                <td>
+                    <a href="#" class="load-button" data-file="/Users/whu/web-ui-best/datasets/example_files/example.xlsx">加载</a>
+                    <a href="/export?file=/Users/whu/web-ui-best/datasets/example_files/example.xlsx" class="export-button" data-file="/Users/whu/web-ui-best/datasets/example_files/example.xlsx">导出</a>
+                    <a href="#" onclick="deleteFile('example.xlsx')">删除</a>
+                </td>
+            </tr>
+        </table>
+    </div>
+        <div class="data-management" id="data-management">
+            <p>您的数据集</p>
+        </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}">
+        let currentPage = 1;
+        let rowsPerPage = 10;
+        let data = [];
+        let totalRows = 0;
+
+        async function fetchData() {
+            const response = await fetch(`/data_show`);
+            data = await response.json();
+            totalRows = data.length;
+            updateTable();
+        }
+
+        function updateTable() {
+            const tableBody = document.querySelector('#data-table tbody');
+            tableBody.innerHTML = '';
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const pageData = data.slice(start, end);
+
+            pageData.forEach((item, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td><input type="checkbox"></td>
+                    <td>${item.id}</td>
+                    <td>${item.text}</td>
+                    <td><button onclick="performAction(${item.id})">操作</button></td>
+                `;
+                tableBody.appendChild(row);
+            });
+
+            document.getElementById('total-rows').textContent = totalRows;
+            document.getElementById('current-page').textContent = currentPage;
+            document.getElementById('total-pages').textContent = Math.ceil(totalRows / rowsPerPage);
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                updateTable();
+            }
+        }
+
+        function nextPage() {
+            if (currentPage * rowsPerPage < totalRows) {
+                currentPage++;
+                updateTable();
+            }
+        }
+
+        function updateRowsPerPage() {
+            rowsPerPage = parseInt(document.getElementById('rows-per-page').value);
+            currentPage = 1;
+            updateTable();
+        }
+
+        function performAction(id) {
+            alert(`操作 on item with ID ${id}`);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData();
+        });
+
+        window.addEventListener('pageshow', () => {
+            fetchData();
+        });
+    </script>
+</body>
+</html>
+

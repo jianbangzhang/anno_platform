@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科大讯飞智能体数据标注平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+        #toggle-btn {
+            position: absolute;
+            top: 10px;
+            left: 0px;
+            background-color: #dceeee;
+            color: white;
+            border: none;
+            padding: 10px;
+            cursor: pointer;
+            z-index: 1;
+        }
+        .search-bar {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        #searchInput {
+            width: 80%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .text-inputs {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        #textInput1, #textInput2 {
+            width: 38.5%;
+            padding: 10px;
+            font-size: 16px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: #007BFF;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+        }
+        .tab {
+            width: 90%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            word-break: break-word; /* 允许单词在单元格内换行 */
+            white-space: pre-wrap;  /* 保持空白字符并允许换行 */
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-btn"></button>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>数据标注</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" id="overview-menu"><a href="{{ url_for('routes.overview') }}">文件管理</a></li>
+            <li class="menu-item">数据标注
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_preview') }}">数据预览</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.intelligent_analysis') }}">智能分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.online_annotation') }}">在线标注</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_process') }}">结构分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_retrieval') }}">数据检索</a></li>
+                </ul>
+            </li>
+            <li class="menu-item">智能体
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_call') }}">智能体调用</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_generation') }}">数据生成</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_conversation') }}">智能体对话</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <h1 style="text-align: center;">数据检索</h1>
+        <div class="sidebar-header">
+            <div class="username-container">
+            <div class="username" onclick="toggleDropdown()">
+                用户：{{ session['username'] }}
+            </div>
+            <div class="dropdown" id="dropdown">
+                <a href="{{ url_for('routes.index') }}" onclick="logout()">退出登录</a>
+            </div>
+        </div>
+        </div>
+        <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="请输入关键词">
+        <button onclick="searchData()">搜索</button>
+        </div>
+        <div class="text-inputs">
+        <input type="text" id="textInput1" placeholder="请输入需要被替换的文本">
+        <input type="text" id="textInput2" placeholder="请输入需要替换的文本">
+        <button onclick="replaceText()">替换</button>
+    </div>
+    <div class="container">
+        <div class="tab">
+            <div id="resultContainer"></div>
+        </div>
+    </div>
+    </div>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

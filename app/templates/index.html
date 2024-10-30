@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>科大讯飞智能体数据标注平台</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: snow;
+        }
+        .header {
+            background-color: cornflowerblue;
+            color: white;
+            padding: 20px 0;
+            text-align: center;
+            font-size: 2.5em;
+            box-shadow: 0 4px 2px -2px gray;
+        }
+        .nav {
+            display: flex;
+            justify-content: flex-end;
+            padding: 5px;
+            background-color: #e3e3e3;
+            box-shadow: 0 4px 2px -2px gray;
+        }
+        .nav button {
+            margin-left: 5px;
+            padding: 10px 10px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+        .nav button:hover {
+            background-color: cornflowerblue;
+        }
+        .form-popup {
+            display: none;
+            position: fixed;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            border: 3px solid #f1f1f1;
+            z-index: 9;
+            background-color: white;
+            padding: 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            border-radius: 10px;
+            width: 300px;
+        }
+
+        .form-popup .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-popup .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .form-popup .form-group input[type="text"],
+        .form-popup .form-group input[type="password"],
+        .form-popup .form-group input[type="email"],
+        .form-popup .form-group input[type="checkbox"] {
+            width: 100%;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .form-popup .form-group input[type="checkbox"] {
+            width: auto;
+            margin-top: 10px;
+        }
+
+        .form-popup .btn-primary {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .form-popup .btn-primary:hover {
+            background-color: #0056b3;
+        }
+
+        .form-popup .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background-color: transparent;
+            border: none;
+            font-size: 18px;
+            cursor: pointer;
+        }
+
+        .form-popup .close-btn:hover {
+            color: red;
+        }
+
+        .container {
+            padding: 20px;
+            text-align: center;
+            margin-top: 100px;
+        }
+        .container h2 {
+            font-size: 2em;
+            margin-bottom: 40px;
+            text-align: center;
+            color: #004d99;
+        }
+        .container a {
+            display: inline-block;
+            margin: 0 20px;
+            padding: 20px 40px;
+            background-color: #004d99;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 1.2em;
+            box-shadow: 0 4px 2px -2px gray;
+        }
+        .container a:hover {
+            background-color: cornflowerblue;
+        }
+    </style>
+    <script>
+        function openForm(formId) {
+            document.getElementById(formId).style.display = 'block';
+        }
+
+        function closeForm(formId) {
+            document.getElementById(formId).style.display = 'none';
+        }
+
+        function togglePassword(inputId) {
+            var input = document.getElementById(inputId);
+            if (input.type === "password") {
+                input.type = "text";
+            } else {
+                input.type = "password";
+            }
+        }
+    </script>
+</head>
+<body>
+    <div class="header">
+        科大讯飞智能体数据平台
+    </div>
+    <div class="nav">
+        <button onclick="openForm('loginForm')">登录</button>
+        <button onclick="openForm('registerForm')">注册</button>
+    </div>
+    <div class="form-popup" id="loginForm">
+        <form method="POST" action="{{ url_for('routes.login') }}">
+            {{ login_form.hidden_tag() }}
+            <div class="form-group">
+                {{ login_form.username.label }} {{ login_form.username() }}
+            </div>
+            <div class="form-group">
+                {{ login_form.password.label }} {{ login_form.password(id='loginPassword') }}
+                <input type="checkbox" onclick="togglePassword('loginPassword')">
+            </div>
+            <div class="form-group">
+                {{ login_form.submit(class="btn btn-primary", value="登录") }}
+            </div>
+            <button type="button" onclick="closeForm('loginForm')">x</button>
+        </form>
+    </div>
+    <div class="form-popup" id="registerForm">
+        <form method="POST" action="{{ url_for('routes.register') }}">
+            {{ register_form.hidden_tag() }}
+            <div class="form-group">
+                {{ register_form.username.label }} {{ register_form.username() }}
+            </div>
+            <div class="form-group">
+                {{ register_form.password.label }} {{ register_form.password(id='registerPassword') }}
+                <input type="checkbox" onclick="togglePassword('registerPassword')"> 显示密码
+            </div>
+            <div class="form-group">
+                {{ register_form.submit(class="btn btn-primary", value="注册") }}
+            </div>
+            <button type="button" onclick="closeForm('registerForm')">x</button>
+        </form>
+    </div>
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <ul>
+                {% for category, message in messages %}
+                    <li style="color: {{ 'red' if category == 'error' else 'green' }};">{{ message }}</li>
+                {% endfor %}
+                </ul>
+            {% endif %}
+        {% endwith %}
+    </div>
+</body>
+</html>

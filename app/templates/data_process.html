@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科大讯飞智能体数据标注平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            box-sizing: border-box;
+        }
+        .header .username, .header .dropdown a {
+            font-family: "KaiTi", serif;
+            font-size: 13px;
+        }
+        #content {
+            padding: 10px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 16px;
+            background-color: #fff;
+            margin: 0 5px;
+        }
+        .tab:hover {
+            background-color: #e0e0e0;
+        }
+        .active {
+            font-weight: bold;
+            border-bottom: 2px solid #007bff;
+            background-color: #e0e0e0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            word-break: break-word; /* 允许单词在单元格内换行 */
+            white-space: pre-wrap;  /* 保持空白字符并允许换行 */
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px 15px;
+            margin: 5px;
+            cursor: pointer;
+            border: none;
+            background-color: gray;
+            color: white;
+            border-radius: 5px;
+        }
+        .pagination button:hover {
+            background-color: lightskyblue;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #fff;
+            border-right: 1px solid #ddd;
+            transition: transform 0.3s ease;
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            left: 0;
+            overflow-y: auto;
+            padding-top: 20px;
+        }
+
+        .username-container {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        .dropdown {
+            display: none;
+            position: absolute;
+            right: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border: 1px solid #ddd;
+        }
+        .dropdown a {
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            color: #333;
+        }
+        .dropdown a:hover {
+            background-color: #f2f2f2;
+        }
+
+    </style>
+</head>
+<body>
+    <button id="toggle-btn"></button>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>数据标注</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" id="overview-menu"><a href="{{ url_for('routes.overview') }}">文件管理</a></li>
+            <li class="menu-item">数据标注
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_preview') }}">数据预览</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.intelligent_analysis') }}">智能分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.online_annotation') }}">在线标注</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_process') }}">结构分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_retrieval') }}">数据检索</a></li>
+                </ul>
+            </li>
+            <li class="menu-item">智能体
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_call') }}">智能体调用</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_generation') }}">数据生成</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_conversation') }}">智能体对话</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <div id="header">
+            <h1 style="text-align: center;">结构分析</h1>
+            <div class="username-container">
+                <div class="username" onclick="toggleDropdown()">
+                    用户：{{ session['username'] }}
+                </div>
+                <div class="dropdown" id="dropdown">
+                    <a href="{{ url_for('routes.index') }}" onclick="logout()">退出登录</a>
+                </div>
+            </div>
+        </div>
+        <div id="message" style="color: red; text-align:center;"></div>
+        <div class="container">
+            <div class="tab active" id="allData" onclick="changeTab('all', this)">全部数据 (0)</div>
+            <div class="tab" id="annotatedData" onclick="changeTab('annotated', this)">有标注数据 (0)</div>
+            <div class="tab" id="unannotatedData" onclick="changeTab('unannotated', this)">无标注数据 (0)</div>
+            <div class="tab" id="deletedData" onclick="changeTab('deleted', this)">回收 (0)</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>原始数据</th>
+                    <th>修改数据</th>
+                    <th>错因</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="data-container">
+                <!-- 数据将通过JavaScript插入 -->
+            </tbody>
+        </table>
+        <div class="pagination">
+            <button onclick="prevPage()">上一页</button>
+            <span id="pageInfo">1 / 1</span>
+            <button id="go-btn" class="nav-button"></button>
+            <input type="text" id="data-id-input" placeholder="Input Data ID">
+            <label for="viewProcessedDataToggle"></label>
+            <button class="save-button" onclick="saveContent()">save</button>
+            <input type="checkbox" id="viewProcessedDataToggle" checked>
+            <button onclick="nextPage()">下一页</button>
+        </div>
+        <div class="data-display" id="data-display"></div>
+        <div id="conversation-container" class="conversation-container">
+            <div class="conversation-wrapper" id="conversation-1">
+                <div id="textbox-container-1" class="textbox-container"></div>
+                <div class="button-container">
+                    <button class="add-button" id="add-question-1" onclick="addTextBox('question', 'textbox-container-1', 'add-question-1')">问题</button>
+                    <button class="add-button" onclick="addThoughtActionTextBox('textbox-container-1')">规划</button>
+                    <button class="add-button" id="add-thoughtFinish-1" onclick="addTextBox('thoughtFinish', 'textbox-container-1', 'add-thoughtFinish-1')">回答</button>
+                    <button class="toggle-button" onclick="toggleConversation(this)"></button>
+                    <button class="add-button" onclick="moveConversationUp(this)">↑</button>
+                    <button class="add-button" onclick="moveConversationDown(this)">↓️</button>
+                </div>
+            </div>
+        </div>
+        <button class="add-button" onclick="addConversation()">＋</button>
+        <button class="add-button" onclick="removeConversation()">-</button>
+    </div>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentData = [];
+        let currentFilterType = 'all';
+
+        async function fetchData(page, type = 'all') {
+            const response = await fetch(`/struct_data?page=${page}&type=${type}`);
+            const result = await response.json();
+            currentData = result.data;
+            displayData(currentData[0]);
+            totalPages = Math.ceil(result.total / result.page_size);
+            document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages}`;
+            document.getElementById('allData').innerText = `全部数据 (${result.total_count})`;
+            document.getElementById('annotatedData').innerText = `有标注数据 (${result.annotated_count})`;
+            document.getElementById('unannotatedData').innerText = `无标注数据 (${result.unannotated_count})`;
+            document.getElementById('deletedData').innerText = `回收数据 (${result.deleted_count})`;
+            if (document.getElementById('viewProcessedDataToggle').checked) {
+                viewProcessedData();
+            }
+            else {
+                document.getElementById('conversation-container').innerHTML = ''; // 清空交互数据显示区域
+            }
+        }
+
+        function displayData(item) {
+            const container = document.getElementById('data-container');
+            container.innerHTML = '';
+            const row = container.insertRow();
+            const cell1 = row.insertCell(0);
+            const cell2 = row.insertCell(1);
+            const cell3 = row.insertCell(2);
+            const cell4 = row.insertCell(3)
+            const cell5 = row.insertCell(4);
+            cell1.textContent = item.id; // 使用数据中的序号
+            cell2.textContent = item.text; // 假设JSON对象中有一个名为'text'的属性
+            cell3.textContent = item.result;
+            cell4.textContent = item.error;
+            if (item.error) {
+                    cell4.style.color = 'red'; // 将错误信息标记为红色
+                }
+            if (currentFilterType === 'deleted') {
+                cell5.innerHTML = `<a href="#" onclick="restoreItem(${item.id})">撤回</a>`;
+            } else {
+                cell5.innerHTML = `<a href="#" onclick="deleteItem(${item.id})">删除</a>`;
+            }
+        }
+
+        async function restoreItem(id) {
+            await fetch(`/restore/${id}`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+
+        async function deleteItem(id) {
+            await fetch(`/delete/${id}`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchData(currentPage, currentFilterType);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchData(currentPage, currentFilterType);
+            }
+        }
+
+        function changeTab(type, element) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+            currentFilterType = type;
+            currentPage = 1;
+            fetchData(currentPage, currentFilterType);
+        }
+        // 结构
+        function toggleConversation(button) {
+            const conversationWrapper = button.closest('.conversation-wrapper');
+            conversationWrapper.classList.toggle('collapsed');
+        }
+
+        const actionParameters = {
+            "get_weather_info_api": {"city": ["武汉市"], "date": ["2024-05-01"]},
+            "calendar_api": {"date": "去年本月"},
+            "get_bill_cost_in_month_api": {"year_month": [{"year": "2024", "month": "2"}]},
+            "get_subscribe_service_api": {},
+            "get_flow_info_api": {},
+            "points_info_api": {},
+            "calculator_api": {"expression": "(3+4)/2"},
+            "get_fee_balance_api": {},
+            "get_pay_history_api": {},
+            "knowledge_retrieval_api": {"query": "什么是现金账本", "keyword": "现金账本"},
+            "visualization_api": {},
+            "get_living_balance_info_api": {"type": ["燃气费"]},
+            "open_living_expenses_info_api": {},
+            "pay_living_expenses_api": {"amount": "100.00元", "type": "电费"},
+            "start_living_expenses_info_api": {},
+            "global_connection_traval_api": {"city": ["合肥", "上海"], "travel_type": ["机场休息室"]},
+            "global_connection_zone_api": {},
+            "movie_ticket_api": {"keyword": ["九龙城寨", "黄鹤楼"], "place": "北京"},
+            "cinema_find_api": {"place": "北京"},
+            "multimedia_content_search_api": {"user_query": "我想看一部由黄轩主演的动作电影，有什么推荐？", "moduleType": ["movie"], "keyword": ["黄轩", "动作"]},
+            "multimedia_rank_search_api": {"moduleType": ["music"]}
+        };
+
+        function createInput(value, placeholder = '', maxLength = 40) {
+            return `<input type="text" class="textbox small-input" placeholder="${placeholder}" value="${value}" maxlength="${maxLength}">`;
+        }
+
+        function createDynamicFields(parameter) {
+            let html = '';
+            if (Object.keys(parameter).length === 0) {
+                return '{}';
+            }
+            for (const key in parameter) {
+                if (Array.isArray(parameter[key]) && parameter[key].length > 0 && typeof parameter[key][0] === 'object') {
+                    html += `"${key}": [`;
+                    parameter[key].forEach((item, index) => {
+                        html += `<div class="dynamic-field" data-key="${key}" data-index="${index}">`;
+                        for (const subKey in item) {
+                            html += `"${subKey}": ${createInput('', subKey === 'year' ? '2024' : '2')}, `;
+                        }
+                        html += `<button type="button" class="remove-field-button">-</button></div>`;
+                    });
+                    html += `] <button type="button" class="add-field-button" data-key="${key}">+</button>`;
+                } else {
+                    html += `"${key}": ${createInput('', parameter[key])}`;
+                }
+            }
+            return `{${html}}`;
+        }
+
+        function isValidPythonDict(str) {
+            try {
+                JSON.parse(str.replace(/'/g, '"'));
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function validateObservation(textarea) {
+            const errorElement = textarea.nextElementSibling;
+            const prefix = 'Observation:';
+            const value = textarea.value.slice(prefix.length).trim();
+
+            if (!isValidPythonDict(value)) {
+                errorElement.style.display = 'block';
+                errorElement.style.color = 'red';
+                errorElement.textContent = 'Invalid Python dictionary format.';
+            } else {
+                errorElement.style.display = 'none';
+                errorElement.textContent = '';
+            }
+        }
+
+        function addTextBox(type, containerId, buttonId = null) {
+            const container = document.getElementById(containerId);
+            let newTextBox = document.createElement('div');
+            newTextBox.className = 'textbox-wrapper ' + type;
+            if (type === 'question') {
+                newTextBox.innerHTML = `
+                    <div class="header">
+                        <div>
+                            <button onclick="moveUp(this)">↑️</button>
+                            <button onclick="moveDown(this)">↓️</button>
+                            <button onclick="removeTextBox(this)">x</button>
+                        </div>
+                    </div>
+                    <input type="text" class="textbox" placeholder="Question: " value="Question: " oninput="ensurePrefix(this, 'Question: ')">
+                `;
+                if (buttonId) {
+                    document.getElementById(buttonId).disabled = true;
+                }
+            } else if (type === 'thoughtAction') {
+                newTextBox.innerHTML = `
+                    <div class="header">
+                        <div>
+                            <button onclick="moveUp(this)">↑️</button>
+                            <button onclick="moveDown(this)">↓️</button>
+                            <button onclick="removeTextBox(this)">x</button>
+                        </div>
+                    </div>
+                    <textarea class="textbox" placeholder="Thought: " value="Thought: " oninput="ensurePrefix(this, 'Thought: ')"></textarea>
+                    <div class="action-parameter">
+                        <label>Action: </label>
+                        <select class="textbox" onchange="updateActionParameter(this)">
+                            ${Object.keys(actionParameters).map(key => `<option value="${key}">${key}</option>`).join('')}
+                        </select>
+                    </div>
+                    <div class="action-parameter">
+                        <label>Action_Parameter: </label>
+                        <div class="action-parameter-fields">{}</div>
+                    </div>
+                    <textarea class="textbox" rows="8" placeholder="Observation: {}" oninput="ensurePrefixAndValidate(this, 'Observation:')">Observation: </textarea>
+                    <div class="error"></div>
+                `;
+            } else if (type === 'thoughtFinish') {
+                newTextBox.innerHTML = `
+                    <div class="header">
+                        <div>
+                            <button onclick="moveUp(this)">↑️</button>
+                            <button onclick="moveDown(this)">↓️</button>
+                            <button onclick="removeTextBox(this)">x</button>
+                        </div>
+                    </div>
+                    <textarea class="textbox" placeholder="Thought: " value="Thought: " oninput="ensurePrefix(this, 'Thought: ')"></textarea>
+                    <textarea class="textbox" placeholder="Finish: " value="Finish: " oninput="ensurePrefix(this, 'Finish: ')"></textarea>
+                `;
+                if (buttonId) {
+                    document.getElementById(buttonId).disabled = true;
+                }
+            }
+            container.appendChild(newTextBox);
+
+            // Add event listeners for add and remove buttons
+            newTextBox.querySelectorAll('.add-field-button').forEach(button => {
+                button.addEventListener('click', addField);
+            });
+            newTextBox.querySelectorAll('.remove-field-button').forEach(button => {
+                button.addEventListener('click', removeField);
+            });
+
+            // Disable remove button if there is only one field
+            checkRemoveButtonState(newTextBox.querySelectorAll('.dynamic-field'));
+        }
+
+        function addThoughtActionTextBox(containerId) {
+            addTextBox('thoughtAction', containerId);
+            const container = document.getElementById(containerId);
+            const newTextBox = container.lastChild;
+            const actionSelect = newTextBox.querySelector('.action-parameter select');
+            updateActionParameter(actionSelect);
+        }
+
+        function addField(event) {
+            const button = event.target;
+            const key = button.getAttribute('data-key');
+            const container = button.previousElementSibling;
+            const newIndex = container.children.length;
+            const newField = document.createElement('div');
+            newField.className = 'dynamic-field';
+            newField.setAttribute('data-key', key);
+            newField.setAttribute('data-index', newIndex);
+            newField.innerHTML = `
+                "year": ${createInput('', '2024')},
+                "month": ${createInput('', '2')}
+                <button type="button" class="remove-field-button">-</button>
+            `;
+            container.appendChild(newField);
+            newField.querySelector('.remove-field-button').addEventListener('click', removeField);
+
+            // Enable all remove buttons if there are more than one field
+            checkRemoveButtonState(container.querySelectorAll('.dynamic-field'));
+        }
+
+        function removeField(event) {
+            const button = event.target;
+            const field = button.closest('.dynamic-field');
+            const container = field.parentElement;
+
+            // Only remove if more than one field is present
+            if (container.children.length > 1) {
+                field.remove();
+            }
+
+            // Disable remove button if there is only one field left
+            checkRemoveButtonState(container.querySelectorAll('.dynamic-field'));
+        }
+
+        function checkRemoveButtonState(fields) {
+            if (fields.length === 1) {
+                fields[0].querySelector('.remove-field-button').disabled = true;
+            } else {
+                fields.forEach(field => {
+                    field.querySelector('.remove-field-button').disabled = false;
+                });
+            }
+        }
+
+        function addConversation() {
+            const conversationContainer = document.getElementById('conversation-container');
+            const newConversationId = `conversation-${conversationContainer.children.length + 1}`;
+            const newConversation = document.createElement('div');
+            newConversation.className = 'conversation-wrapper';
+            newConversation.id = newConversationId;
+            newConversation.innerHTML = `
+                <div id="textbox-container-${conversationContainer.children.length + 1}" class="textbox-container"></div>
+                <div class="button-container">
+                    <button class="add-button" id="add-question-${conversationContainer.children.length + 1}" onclick="addTextBox('question', 'textbox-container-${conversationContainer.children.length + 1}', 'add-question-${conversationContainer.children.length + 1}')">问题</button>
+                    <button class="add-button" onclick="addThoughtActionTextBox('textbox-container-${conversationContainer.children.length + 1}')">规划</button>
+                    <button class="add-button" id="add-thoughtFinish-${conversationContainer.children.length + 1}" onclick="addTextBox('thoughtFinish', 'textbox-container-${conversationContainer.children.length + 1}', 'add-thoughtFinish-${conversationContainer.children.length + 1}')">回答</button>
+                    <button class="toggle-button" onclick="toggleConversation(this)"></button>
+                    <button class="add-button" onclick="moveConversationUp(this)">↑️</button>
+                    <button class="add-button" onclick="moveConversationDown(this)">↓️</button>
+                </div>
+            `;
+            conversationContainer.appendChild(newConversation);
+        }
+
+        function populateData(data) {
+            const conversationContainer = document.getElementById('conversation-container');
+            conversationContainer.innerHTML = ''; // 确保容器是空的
+            data.forEach((conversation, index) => {
+                const newConversationId = `conversation-${index + 1}`;
+                const newConversation = document.createElement('div');
+                newConversation.className = 'conversation-wrapper';
+                newConversation.id = newConversationId;
+                newConversation.innerHTML = `
+                    <div id="textbox-container-${index + 1}" class="textbox-container"></div>
+                    <div class="button-container">
+                        <button class="add-button" id="add-question-${index + 1}" onclick="addTextBox('question', 'textbox-container-${index + 1}', 'add-question-${index + 1}')">问题</button>
+                        <button class="add-button" onclick="addThoughtActionTextBox('textbox-container-${index + 1}')">规划</button>
+                        <button class="add-button" id="add-thoughtFinish-${index + 1}" onclick="addTextBox('thoughtFinish', 'textbox-container-${index + 1}', 'add-thoughtFinish-${index + 1}')">回答</button>
+                        <button class="toggle-button" onclick="toggleConversation(this)"></button>
+                        <button class="add-button" onclick="moveConversationUp(this)">↑️</button>
+                        <button class="add-button" onclick="moveConversationDown(this)">↓️</button>
+                    </div>
+                `;
+                conversationContainer.appendChild(newConversation);
+
+                const container = document.getElementById(`textbox-container-${index + 1}`);
+                conversation.forEach(item => {
+                    let newTextBox = document.createElement('div');
+                    newTextBox.className = 'textbox-wrapper ' + item.type;
+                    if (item.type === 'question') {
+                        newTextBox.innerHTML = `
+                            <div class="header">
+                                <div>
+                                    <button onclick="moveUp(this)">↑️</button>
+                                    <button onclick="moveDown(this)">↓️</button>
+                                    <button onclick="removeTextBox(this)">x</button>
+                                </div>
+                            </div>
+                            <input type="text" class="textbox" value="${item.content[0].prefix}${item.content[0].value}" oninput="ensurePrefix(this, '${item.content[0].prefix}')">
+                        `;
+                        document.getElementById(`add-question-${index + 1}`).disabled = true;
+                    } else if (item.type === 'thoughtAction') {
+                        newTextBox.innerHTML = `
+                            <div class="header">
+                                <div>
+                                    <button onclick="moveUp(this)">↑️</button>
+                                    <button onclick="moveDown(this)">↓️</button>
+                                    <button onclick="removeTextBox(this)">x</button>
+                                </div>
+                            </div>
+                            <textarea class="textbox" rows="4" oninput="ensurePrefix(this, '${item.content[0].prefix}')">${item.content[0].prefix}${item.content[0].value}</textarea>
+                            <div class="action-parameter">
+                                <label>Action: </label>
+                                <input type="text" class="textbox" value="${item.content[1].value}">
+                            </div>
+                            <div class="action-parameter">
+                                <label>Action_Parameter: </label>
+                                <div><input type="text" class="textbox" value='${item.content[2].prefix}${item.content[2].value}'></div>
+                            </div>
+                            <textarea class="textbox" rows="4" oninput="validateObservation(this)">Observation:${item.content[3].value}</textarea>
+                            <div class="error"></div>
+                        `;
+                    } else if (item.type === 'thoughtFinish') {
+                        newTextBox.innerHTML = `
+                            <div class="header">
+                                <div>
+                                    <button onclick="moveUp(this)">↑️</button>
+                                    <button onclick="moveDown(this)">↓️</button>
+                                    <button onclick="removeTextBox(this)">x</button>
+                                </div>
+                            </div>
+                            <textarea class="textbox" rows="4" oninput="ensurePrefix(this, '${item.content[0].prefix}')">${item.content[0].prefix}${item.content[0].value}</textarea>
+                            <textarea class="textbox" rows="4" oninput="ensurePrefix(this, '${item.content[1].prefix}')">${item.content[1].prefix}${item.content[1].value}</textarea>
+                        `;
+                        document.getElementById(`add-thoughtFinish-${index + 1}`).disabled = true;
+                    }
+                    container.appendChild(newTextBox);
+                });
+            });
+        }
+
+        function viewProcessedData() {
+            if (!currentData[0]) {
+                console.error("No data available to process");
+                return;
+            }
+            let text = currentData[0].result ? currentData[0].result : currentData[0].text;
+            fetch('/view_processed_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ text: text })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    populateData(data.data);
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        async function saveContent() {
+            const conversationContainer = document.getElementById('conversation-container');
+            const conversations = conversationContainer.getElementsByClassName('conversation-wrapper');
+            const data = [];
+
+            for (let i = 0; i < conversations.length; i++) {
+                const conversation = conversations[i];
+                const textboxes = conversation.getElementsByClassName('textbox-wrapper');
+                const conversationData = [];
+
+                for (let j = 0; j < textboxes.length; j++) {
+                    const textbox = textboxes[j];
+                    const type = textbox.className.split(' ')[1];
+                    const content = [];
+
+                    if (type === 'question') {
+                        const input = textbox.querySelector('input[type="text"]');
+                        content.push({type: 'input', value: input.value});
+                    } else if (type === 'thoughtAction') {
+                        const thoughtInput = textbox.querySelector('textarea');
+                        const actionInput = textbox.querySelector('.action-parameter input[type="text"]');
+                        const actionParameterDiv = textbox.querySelector('.action-parameter div input[type="text"]');
+                        const observationTextarea = textbox.querySelector('textarea:nth-of-type(2)');
+
+                        content.push({type: 'input', value: thoughtInput.value});
+                        content.push({type: 'input', value: actionInput.value});
+                        content.push({type: 'input', value: actionParameterDiv.value});
+                        content.push({type: 'textarea', value: observationTextarea.value});
+                    } else if (type === 'thoughtFinish') {
+                        const thoughtInput = textbox.querySelector('textarea');
+                        const finishInput = textbox.querySelector('textarea:nth-of-type(2)');
+
+                        content.push({type: 'input', value: thoughtInput.value});
+                        content.push({type: 'input', value: finishInput.value});
+                    }
+
+                    conversationData.push({type, content});
+                }
+
+                data.push(conversationData);
+            }
+
+            fetch('/save_struct_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({"page":currentPage,"data":data})
+            }).then(response => {
+                if (!response.ok) {
+                    return response.json().then(error => Promise.reject(error));
+                }
+                return response.json();
+            }).then(result => {
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = '数据保存成功!';
+                messageElement.style.color = 'green';
+            }).catch(error => {
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = '数据保存失败: ' + error.error;
+                messageElement.style.color = 'red';
+            });
+        }
+
+
+
+        function removeConversation() {
+            const conversationContainer = document.getElementById('conversation-container');
+            const conversations = conversationContainer.getElementsByClassName('conversation-wrapper');
+
+            // 确保至少有一个对话框
+            if (conversations.length > 1) {
+                // 删除最后一个对话框
+                conversationContainer.removeChild(conversations[conversations.length - 1]);
+            } else if (conversations.length === 1) {
+                // 如果只有一个对话框，向用户发出提醒
+                alert("至少需要保留一个对话框！");
+            } else {
+                console.error("At least one conversation must be present.");
+            }
+        }
+
+        function moveConversationUp(button) {
+            const conversationContainer = document.getElementById('conversation-container');
+            const currentConversation = button.closest('.conversation-wrapper');
+            const previousConversation = currentConversation.previousElementSibling;
+            if (previousConversation) {
+                conversationContainer.insertBefore(currentConversation, previousConversation);
+            }
+        }
+
+        function moveConversationDown(button) {
+            const conversationContainer = document.getElementById('conversation-container');
+            const currentConversation = button.closest('.conversation-wrapper');
+            const nextConversation = currentConversation.nextElementSibling;
+            if (nextConversation) {
+                conversationContainer.insertBefore(nextConversation, currentConversation);
+            }
+        }
+
+        function removeTextBox(button) {
+            const container = button.closest('.textbox-container');
+            const wrapper = button.closest('.textbox-wrapper');
+            const type = wrapper.className.split(' ')[1];
+            if (type === 'question') {
+                const addButton = container.parentElement.querySelector(`#add-question-${container.id.split('-')[2]}`);
+                addButton.disabled = false;
+            } else if (type === 'thoughtFinish') {
+                const addButton = container.parentElement.querySelector(`#add-thoughtFinish-${container.id.split('-')[2]}`);
+                addButton.disabled = false;
+            }
+            container.removeChild(wrapper);
+        }
+
+        function moveUp(button) {
+            const container = button.closest('.textbox-container');
+            const currentBox = button.closest('.textbox-wrapper');
+            const previousBox = currentBox.previousElementSibling;
+            if (previousBox) {
+                container.insertBefore(currentBox, previousBox);
+            }
+        }
+
+        function moveDown(button) {
+            const container = button.closest('.textbox-container');
+            const currentBox = button.closest('.textbox-wrapper');
+            const nextBox = currentBox.nextElementSibling;
+            if (nextBox) {
+                container.insertBefore(nextBox, currentBox);
+            }
+        }
+        
+        
+        function ensurePrefix(input, prefix) {
+            if (!input.value.startsWith(prefix)) {
+                input.value = prefix + input.value.slice(prefix.length);
+            }
+        }
+
+        function ensurePrefixAndValidate(input, prefix) {
+            if (!input.value.startsWith(prefix)) {
+                input.value = prefix + input.value.slice(prefix.length);
+            }
+
+            const errorElement = input.nextElementSibling;
+            const value = input.value.slice(prefix.length).trim();
+
+            if (!isValidPythonDict(value)) {
+                errorElement.style.display = 'block';
+                errorElement.style.color = 'red';
+                errorElement.textContent = 'Invalid Python dictionary format.';
+            } else {
+                errorElement.style.display = 'none';
+                errorElement.textContent = '';
+            }
+        }
+
+        function updateActionParameter(selectElement) {
+            const actionParameterDiv = selectElement.closest('.action-parameter').nextElementSibling.querySelector('.action-parameter-fields');
+            const selectedAPI = selectElement.value;
+            const parameters = actionParameters[selectedAPI];
+            actionParameterDiv.innerHTML = createDynamicFields(parameters);
+
+            // Re-attach event listeners
+            actionParameterDiv.querySelectorAll('.add-field-button').forEach(button => {
+                button.addEventListener('click', addField);
+            });
+            actionParameterDiv.querySelectorAll('.remove-field-button').forEach(button => {
+                button.addEventListener('click', removeField);
+            });
+
+            // Disable remove button if there is only one field
+            checkRemoveButtonState(actionParameterDiv.querySelectorAll('.dynamic-field'));
+        }
+
+       
+        document.getElementById('go-btn').addEventListener('click', function () {
+            const inputElement = document.getElementById('data-id-input');
+            const inputId = parseInt(inputElement.value);
+            if (!isNaN(inputId) && inputId > 0) {
+                currentPage=inputId;
+                fetchDataById(inputId);
+            } else {
+                alert('invaild data ID');
+            }
+        });
+
+        async function fetchDataById(index) {
+            fetch('/process_data_by_id', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: `index=${index}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                const messageElement = document.getElementById('message');
+                if (data.error) {
+                    messageElement.textContent = data.error;
+                } else {
+                    messageElement.textContent = ''; // 清空消息
+
+                    displayData(data.data);
+                    document.getElementById('pageInfo').innerText = `${index} / ${totalPages}`;
+
+                    if (document.getElementById('viewProcessedDataToggle').checked) {
+                        viewProcessedData();
+                    }
+                    else {
+                        document.getElementById('conversation-container').innerHTML = ''; // 清空交互数据显示区域
+                    }
+                }
+            })
+            .catch(error => {
+                const messageElement = document.getElementById('message');
+                messageElement.textContent = 'Error: ' + error.message;
+                console.error('Error:', error);
+            });
+        }
+
+        // 初次加载数据
+        fetchData(currentPage, currentFilterType);
+
+        function toggleDropdown() {
+            var dropdown = document.getElementById('dropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    alert('退出登录失败');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('退出登录失败');
+            });
+        }
+
+        // 点击页面其他地方时关闭下拉菜单
+        window.onclick = function(event) {
+            if (!event.target.matches('.username')) {
+                var dropdown = document.getElementById('dropdown');
+                if (dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData(currentPage, currentFilterType);
+        });
+
+        document.getElementById('go-btn').addEventListener('click', function () {
+            const inputElement = document.getElementById('data-id-input');
+            const inputId = parseInt(inputElement.value);
+            if (!isNaN(inputId)) {
+                fetchDataById(inputId - 1);
+            } else {
+                alert('请输入有效的数据ID');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('hide');
+                content.classList.toggle('full');
+            });
+
+            window.loadContent = function(page) {
+                fetch(`/${page}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        content.innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.warn('Error loading content:', error);
+                    });
+            }
+        });
+
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科大讯飞智能体数据标注平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: white;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .add-button{
+            padding: 10px 10px;
+            font-size: 12px;
+            margin-left: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            background-color: white;
+            color: #007bff;
+            cursor: pointer;
+        }
+
+        .add-button:hover{
+            background-color: #0056b3;
+        }
+
+        .container {
+            max-width: 100%;
+            margin: auto;
+        }
+
+        h1 {
+            font-family: 'KaiTi', KaiTi, sans-serif;
+            font-size: 2em;
+            color: #007bff;
+            animation: colorChange 2s infinite;
+            text-align: center;
+        }
+
+        .conversation-container {
+            display: flex;
+            flex-wrap: nowrap;
+            overflow-x: auto;
+            padding: 10px;
+            gap: 10px;
+        }
+
+        .conversation-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #f0f0f0;
+            min-width: 300px;
+        }
+
+        .textbox-wrapper {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            padding: 5px;
+            border-radius: 4px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+        }
+
+        .textbox-wrapper.question {
+            background-color: white;
+        }
+
+        .textbox-wrapper.thoughtAction {
+            background-color: white;
+        }
+
+        .textbox-wrapper.thoughtFinish {
+            background-color: white;
+        }
+        .textbox-wrapper input, .textbox-wrapper textarea {
+            padding: 5px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+        .button-container {
+            display: flex;
+            justify-content: space-between;
+            gap: 0px;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-btn"></button>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>数据标注</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" id="overview-menu"><a href="{{ url_for('routes.overview') }}">文件管理</a></li>
+            <li class="menu-item">数据标注
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_preview') }}">数据预览</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.intelligent_analysis') }}">智能分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.online_annotation') }}">在线标注</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_process') }}">结构分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_retrieval') }}">数据检索</a></li>
+                </ul>
+            </li>
+            <li class="menu-item">智能体
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_call') }}">智能体调用</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_generation') }}">数据生成</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_conversation') }}">智能体对话</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <h1 style="text-align: center;">数据生成</h1>
+        <div class="sidebar-header">
+            <div class="username-container">
+            <div class="username" onclick="toggleDropdown()">
+                用户：{{ session['username'] }}
+            </div>
+            <div class="dropdown" id="dropdown">
+                <a href="{{ url_for('routes.index') }}" onclick="logout()">退出登录</a>
+            </div>
+        </div>
+        </div>
+        <div class="container">
+        <div id="conversation-container" class="conversation-container"></div>
+        <div class="button-container">
+            <button class="add-button" onclick="addConversation()"></button>
+        </div>
+    </div>
+    <script>
+        function createTextBox(type, content = []) {
+            let html = `<div class="textbox-wrapper ${type}">`;
+            if (type === 'question') {
+                html += `<textarea rows="2" oninput="ensurePrefix(this, 'Question: ')">${content[0] || 'Question: '}</textarea>`;
+            } else if (type === 'thoughtAction') {
+                html += `<textarea rows="2" oninput="ensurePrefix(this, 'Thought: ')">${content[0] || 'Thought: '}</textarea>`;
+                html += `<textarea rows="1" oninput="ensurePrefix(this, 'Action: ')">${content[1] || 'Action: '}</textarea>`;
+                html += `<textarea rows="1" oninput="ensurePrefix(this, 'Action_Parameter: ')">${content[2] || 'Action_Parameter: '}</textarea>`;
+                html += `<textarea rows="3" oninput="ensurePrefix(this, 'Observation: ')">${content[3] || 'Observation: '}</textarea>`;
+            } else if (type === 'thoughtFinish') {
+                html += `<textarea rows="2" oninput="ensurePrefix(this, 'Thought: ')">${content[0] || 'Thought: '}</textarea>`;
+                html += `<textarea rows="3" oninput="ensurePrefix(this, 'Finish: ')">${content[1] || 'Finish: '}</textarea>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        function ensurePrefix(input, prefix) {
+            if (!input.value.startsWith(prefix)) {
+                input.value = prefix + input.value.slice(prefix.length);
+            }
+        }
+
+        function addConversation() {
+            const container = document.getElementById('conversation-container');
+            const newConversation = document.createElement('div');
+            newConversation.className = 'conversation-wrapper';
+            newConversation.innerHTML = `
+                <div class="button-container">
+                    <button class="add-button" onclick="addTextBox(this, 'question')">问题</button>
+                    <button class="add-button" onclick="addTextBox(this, 'thoughtAction')">规划</button>
+                    <button class="add-button" onclick="addTextBox(this, 'thoughtFinish')">回答</button>
+                </div>
+                <div class="textbox-container"></div>
+            `;
+            container.appendChild(newConversation);
+        }
+
+        function addTextBox(button, type) {
+            const container = button.closest('.conversation-wrapper').querySelector('.textbox-container');
+            const content = [];
+            if (type === 'question') {
+                content.push('Question: ');
+            } else if (type === 'thoughtAction') {
+                content.push('Thought: ', 'Action: ', 'Action_Parameter: ', 'Observation: ');
+            } else if (type === 'thoughtFinish') {
+                content.push('Thought: ','Finish: ');
+            }
+            const newTextBox = createTextBox(type, content);
+            container.insertAdjacentHTML('beforeend', newTextBox);
+        }
+        function toggleDropdown() {
+            var dropdown = document.getElementById('dropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    alert('退出登录失败');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('退出登录失败');
+            });
+        }
+
+        // 点击页面其他地方时关闭下拉菜单
+        window.onclick = function(event) {
+            if (!event.target.matches('.username')) {
+                var dropdown = document.getElementById('dropdown');
+                if (dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+    </script>
+</body>
+</html>

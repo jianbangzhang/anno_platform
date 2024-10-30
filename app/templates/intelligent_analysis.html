@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>科大讯飞智能体数据标注平台</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .tab {
+            flex: 1;
+            text-align: center;
+            padding: 10px 0;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-size: 16px;
+        }
+        .active {
+            font-weight: bold;
+            border-bottom: 2px solid #007bff;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+       th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            word-break: break-word; /* 允许单词在单元格内换行 */
+            white-space: pre-wrap;  /* 保持空白字符并允许换行 */
+        }
+
+        th {
+            background-color: #f2f2f2;
+            text-align: left;
+        }
+
+
+        .tab {
+            cursor: pointer;
+            padding: 10px;
+            display: inline-block;
+            margin-right: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+
+        .tab.active {
+            background-color: #ddd;
+        }
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .pagination button {
+            padding: 10px;
+            margin: 5px;
+            cursor: pointer;
+        }
+        /* Modal styles */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgb(0,0,0);
+            background-color: rgba(0,0,0,0.4);
+        }
+       .modal-content {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 1100px; /* 固定宽度为视口宽度的四分之一 */
+            height: 700px; /* 固定高度为视口高度的四分之一 */
+            position: fixed; /* 确保窗口居中 */
+            top: 50%; /* 窗口居中 */
+            left: 50%; /* 窗口居中 */
+            transform: translate(-50%, -50%); /* 窗口居中 */
+            box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+            z-index: 1050;
+            overflow: auto; /* 当内容超出时出现滚动条 */
+            white-space: pre-wrap; /* 保证文本换行 */
+        }
+
+        .modal-footer {
+            position: fixed;
+            bottom: 10px;
+            width: 90%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+        }
+
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
+        }
+        .modal-header {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .modal-content p {
+            font-size: 18px;
+            margin: 20px 0;
+        }
+        .modal-footer {
+            text-align: right;
+        }
+        .modal-footer button {
+            padding: 10px 20px;
+            margin-left: 10px;
+            color:#007BFF;
+        }
+    </style>
+</head>
+<body>
+    <button id="toggle-btn"></button>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <h2>数据标注</h2>
+        </div>
+        <ul class="sidebar-menu">
+            <li class="menu-item" id="overview-menu"><a href="{{ url_for('routes.overview') }}">文件管理</a></li>
+            <li class="menu-item">数据标注
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_preview') }}">数据预览</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.intelligent_analysis') }}">智能分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.online_annotation') }}">在线标注</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_process') }}">结构分析</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_retrieval') }}">数据检索</a></li>
+                </ul>
+            </li>
+            <li class="menu-item">智能体
+                <ul class="submenu">
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_call') }}">智能体调用</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.data_generation') }}">数据生成</a></li>
+                    <li class="submenu-item"><a href="{{ url_for('routes.agent_conversation') }}">智能体对话</a></li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+    <div id="content">
+        <h1 style="text-align: center;">智能分析</h1>
+        <div class="sidebar-header">
+            <div class="username-container">
+            <div class="username" onclick="toggleDropdown()">
+                用户：{{ session['username'] }}
+            </div>
+            <div class="dropdown" id="dropdown">
+                <a href="{{ url_for('routes.index') }}" onclick="logout()">退出登录</a>
+            </div>
+        </div>
+        </div>
+        <div class="container">
+            <div class="tab active" id="allData" onclick="changeTab('all', this)">全部数据 (0)</div>
+            <div class="tab" id="correctData" onclick="changeTab('correct_data', this)">正确数据 (0)</div>
+            <div class="tab" id="errorData" onclick="changeTab('error_data', this)">错误数据 (0)</div>
+            <div class="tab" id="deletedData" onclick="changeTab('deleted', this)">回收 (0)</div>
+        </div>
+        <table>
+            <thead>
+                <tr>
+                    <th>序号</th>
+                    <th>原始数据</th>
+                    <th>错误原因</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody id="data-container">
+                <!-- 数据将通过JavaScript插入 -->
+            </tbody>
+        </table>
+        <div class="pagination">
+            <button onclick="prevPage()">上一页</button>
+            <span id="pageInfo">1 / 1</span>
+            <button onclick="nextPage()">下一页</button>
+        </div>
+
+        <!-- Modal -->
+        <div id="myModal" class="modal">
+            <div class="modal-content">
+                <span class="close" onclick="closeModal()">&times;</span>
+                <div class="modal-header" id="modalHeader"></div>
+                <p id="modalText"></p>
+                <div class="modal-footer">
+                    <button onclick="prevModal()">上一条</button>
+                    <button onclick="nextModal()">下一条</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        let currentPage = 1;
+        let totalPages = 1;
+        let currentData = [];
+        let fullData = [];
+        let currentModalIndex = 0;
+        let currentFilterType = 'all';
+
+        async function fetchData(page, type = 'all') {
+            const response = await fetch(`/analysis_data?page=${page}&type=${type}`);
+            const result = await response.json();
+            currentData = result.data;
+            if (page === 1) {
+                fullData = currentData;
+            } else {
+                fullData = fullData.concat(currentData);
+            }
+            displayData(currentData);
+            totalPages = Math.ceil(result.total / result.page_size);
+            document.getElementById('pageInfo').innerText = `${currentPage} / ${totalPages}`;
+            document.getElementById('allData').innerText = `全部数据 (${result.total_count})`;
+            document.getElementById('correctData').innerText = `正确数据 (${result.correct_count})`;
+            document.getElementById('errorData').innerText = `错误数据 (${result.error_count})`;
+            document.getElementById('deletedData').innerText = `回收 (${result.deleted_count})`;
+        }
+
+        function displayData(data) {
+            const container = document.getElementById('data-container');
+            container.innerHTML = '';
+            data.forEach((item, index) => {
+                const row = container.insertRow();
+                const cell1 = row.insertCell(0);
+                const cell2 = row.insertCell(1);
+                const cell3 = row.insertCell(2);
+                const cell4 = row.insertCell(3);
+                cell1.textContent = item.id; // 使用数据中的序号
+                cell2.textContent = item.text; // 假设JSON对象中有一个名为'text'的属性
+                cell3.textContent = item.error;
+                if (item.error) {
+                    cell3.style.color = 'red'; // 将错误信息标记为红色
+                }
+                if (currentFilterType === 'deleted') {
+                     cell4.innerHTML = `
+                        <div class="vertical-text">
+                            <a href="#" onclick="openModal(${(currentPage - 1) * 10 + index})">查看</a>
+                            <a href="#" onclick="restoreItem(${item.id})">撤回</a>
+                            <a href="#" onclick="restoreCurrentPageData()">撤回页面数据</a>
+                            <a href="#" onclick="restoreAllData()">全部撤回</a>
+                        </div>`;
+                } else {
+                     cell4.innerHTML = `
+                        <div class="vertical-text">
+                            <a href="#" onclick="openModal(${(currentPage - 1) * 10 + index})">查看</a>
+                            <a href="#" onclick="deleteItem(${item.id})">删除</a>
+                            <a href="#" onclick="deleteCurrentPageData()">删除页面数据</a>
+                            <a href="#" onclick="deleteAllData()">全部删除</a>
+                        </div>`;
+                }
+            });
+        }
+
+        async function deleteCurrentPageData() {
+            const ids = currentData.map(item => item.id);
+            await fetch(`/delete_page`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: ids }),
+            });
+            fetchData(currentPage, currentFilterType);
+        }
+
+        async function deleteAllData() {
+            await fetch(`/delete_all`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+
+        async function restoreCurrentPageData() {
+            const ids = currentData.map(item => item.id);
+            await fetch(`/restore_page`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ids: ids }),
+            });
+            fetchData(currentPage, currentFilterType);
+        }
+
+        async function restoreAllData() {
+            await fetch(`/restore_all`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+
+        async function restoreItem(id) {
+            await fetch(`/analysis_restore/${id}`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+
+
+        function nextPage() {
+            if (currentPage < totalPages) {
+                currentPage++;
+                fetchData(currentPage, currentFilterType);
+            }
+        }
+
+        function prevPage() {
+            if (currentPage > 1) {
+                currentPage--;
+                fetchData(currentPage, currentFilterType);
+            }
+        }
+
+        function changeTab(type, element) {
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            element.classList.add('active');
+            currentFilterType = type;
+            currentPage = 1;
+            fetchData(currentPage, currentFilterType);
+        }
+
+        function openModal(index) {
+            currentModalIndex = index;
+            showModalData();
+            document.getElementById('myModal').style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById('myModal').style.display = "none";
+        }
+
+        function nextModal() {
+            if (currentModalIndex < fullData.length - 1) {
+                currentModalIndex++;
+                showModalData();
+            }
+        }
+
+        function prevModal() {
+            if (currentModalIndex > 0) {
+                currentModalIndex--;
+                showModalData();
+            }
+        }
+
+        function showModalData() {
+            const item = fullData[currentModalIndex];
+            document.getElementById('modalHeader').textContent = item.id;
+            document.getElementById('modalText').textContent = item.text;
+        }
+
+        async function deleteItem(id) {
+            await fetch(`/analysis_delete/${id}`, { method: 'POST' });
+            fetchData(currentPage, currentFilterType);
+        }
+        function toggleDropdown() {
+            var dropdown = document.getElementById('dropdown');
+            if (dropdown.style.display === 'block') {
+                dropdown.style.display = 'none';
+            } else {
+                dropdown.style.display = 'block';
+            }
+        }
+
+        function logout() {
+            fetch('/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).then(response => {
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    alert('退出登录失败');
+                }
+            }).catch(error => {
+                console.error('Error:', error);
+                alert('退出登录失败');
+            });
+        }
+
+        // 点击页面其他地方时关闭下拉菜单
+        window.onclick = function(event) {
+            if (!event.target.matches('.username')) {
+                var dropdown = document.getElementById('dropdown');
+                if (dropdown.style.display === 'block') {
+                    dropdown.style.display = 'none';
+                }
+            }
+        }
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            fetchData(currentPage, currentFilterType);
+        });
+
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const toggleBtn = document.getElementById('toggle-btn');
+            const sidebar = document.getElementById('sidebar');
+            const content = document.getElementById('content');
+
+            toggleBtn.addEventListener('click', () => {
+                sidebar.classList.toggle('hide');
+                content.classList.toggle('full');
+            });
+
+            window.loadContent = function(page) {
+                fetch(`/${page}`)
+                    .then(response => response.text())
+                    .then(html => {
+                        content.innerHTML = html;
+                    })
+                    .catch(error => {
+                        console.warn('Error loading content:', error);
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
